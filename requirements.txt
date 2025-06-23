@@ -1,5 +1,8 @@
-﻿fastapi==0.115.13
+fastapi==0.115.13
 uvicorn==0.34.3
 SQLAlchemy==2.0.41
 pydantic==2.11.7
 passlib==1.7.4
+jose==1.0.0
+starlette==0.47.1
+dotenv==0.9.9
