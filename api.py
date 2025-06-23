@@ -11,9 +11,10 @@ from fastapi.responses import Response
 from passlib.context import CryptContext
 from sqlalchemy import or_
 from sqlalchemy.orm import Session, joinedload
+
 from datetime import datetime, timedelta, date
 from functools import wraps
-from jose import jwt, JWTError
+from jwt import decode as jwt_decode, encode as jwt_encode, PyJWTError
 from starlette.responses import JSONResponse
 
 from dataBase import (User, Task, UserRole, TaskStatus, SessionLocal, AVAILABLE_ICONS, Message, MessageStatus, Event)
@@ -73,7 +74,7 @@ def create_access_token(data: dict, expires_delta: timedelta = None) -> str:
     else:
         expire = datetime.utcnow() + timedelta(minutes=15)
     to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return jwt_encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 async def get_current_user(
     token: str = Depends(oauth2_scheme),
@@ -85,7 +86,7 @@ async def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt_decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id: str = payload.get("sub")
         if user_id is None:
             raise credentials_exception
@@ -103,7 +104,7 @@ async def get_current_user(
         if user is None:
             raise credentials_exception
         return user
-    except JWTError:
+    except PyJWTError:
         raise credentials_exception
 
 def role_required(required_role: UserRole):
