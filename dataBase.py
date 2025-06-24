@@ -34,11 +34,6 @@ class MessageStatus(enum.Enum):
     delivered = "delivered"
     read = "read"
 
-# Список доступных иконок
-AVAILABLE_ICONS = [
-    "icon1", "icon2", "icon3", "icon4", "icon5", "icon6"
-]
-
 class User(Base):
     __tablename__ = 'users'
 
@@ -52,7 +47,6 @@ class User(Base):
     login = Column(String(50), unique=True, index=True, nullable=False)
     email = Column(String(70), unique=True, index=True, nullable=False)
     role = Column(Enum(UserRole), default=UserRole.user, nullable=False)
-    icon = Column(String, nullable=True)
 
     tasks = relationship("Task", back_populates="creator", cascade="all, delete-orphan")
     events = relationship("Event", back_populates="user", cascade="all, delete-orphan")
