@@ -8,3 +8,4 @@ starlette==0.46.2
 dotenv==0.9.9
 psycopg2==2.9.10
 python-multipart==0.0.20
+argon2_cffi==25.1.0
