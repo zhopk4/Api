@@ -733,6 +733,7 @@ async def create_message(
     try:
         db_message = Message(
             sender_id=current_user.id,
+            receiver_id=message.receiver_id,
             message_text=message.message_text,
             timestamp=datetime.utcnow(),
             status=MessageStatus.sent
