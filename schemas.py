@@ -25,7 +25,6 @@ class UserProfile(BaseModel):
     group_name: str
     birthday: Optional[date] = None
     email: str
-    icon: Optional[str] = None
     role: str
 
 class UserRegister(BaseModel):
@@ -37,7 +36,6 @@ class UserRegister(BaseModel):
     login: str
     email: str
     password: str
-    icon: Optional[str] = None
 
     @validator('group_name')
     def validate_group_name(cls, v):
@@ -87,7 +85,6 @@ class UserProfileUpdate(BaseModel):
     group_name: Optional[str] = None
     birthday: Optional[date] = None
     email: Optional[str] = None
-    icon: Optional[str] = None
 
 class UserRoleUpdate(BaseModel):
     user_id: int
@@ -111,7 +108,6 @@ class TaskWithCreator(BaseModel):
     created_by: int
     creator_surname: str
     creator_name: str
-    creator_icon: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -176,7 +172,6 @@ class EventResponse(EventBase):
     user_id: int
     creator_name: str
     creator_surname: str
-    creator_icon: Optional[str] = None
 
     class Config:
         from_attributes = True
