@@ -731,6 +731,19 @@ async def create_message(
     current_user: User = Depends(get_current_user)
 ):
     try:
+        # Проверяем, что получатель существует
+        receiver = db.query(User).filter(User.id == message.receiver_id).first()
+        if not receiver:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Receiver not found"
+            )
+        if current_user.id == message.receiver_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot send message to yourself"
+            )
+
         db_message = Message(
             sender_id=current_user.id,
             receiver_id=message.receiver_id,
@@ -742,6 +755,8 @@ async def create_message(
         db.commit()
         db.refresh(db_message)
         return db_message
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error creating message: {str(e)}", exc_info=True)
         db.rollback()
@@ -1049,7 +1064,7 @@ async def delete_event(
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     error_data = {
         "detail": exc.errors(),
-        "body": await request.body(),
+        "body": str(),
         "headers": dict(request.headers),
         "query_params": dict(request.query_params),
         "path_params": dict(request.path_params),
@@ -1061,5 +1076,5 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        content={"detail": exc.errors(), "context": error_data},
+        content={"detail": exc.errors()},
     )
