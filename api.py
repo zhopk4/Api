@@ -1,8 +1,6 @@
 import json
-from re import purge
 from typing import List, Optional
 from urllib.request import Request
-from wsgiref.validate import validator
 
 from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Query, APIRouter
 from fastapi.exceptions import RequestValidationError
@@ -17,7 +15,7 @@ from functools import wraps
 from jwt import decode as jwt_decode, encode as jwt_encode, PyJWTError
 from starlette.responses import JSONResponse
 
-from dataBase import (User, Task, UserRole, TaskStatus, SessionLocal, AVAILABLE_ICONS, Message, MessageStatus, Event)
+from dataBase import (User, Task, UserRole, TaskStatus, SessionLocal, Message, MessageStatus, Event)
 from schemas import (UserProfile, UserRegister, UserLogin, UserProfileUpdate, UserRoleUpdate, TaskCreate, TaskUpdate,
                      TaskWithCreator, TaskStats, RestorePasswordRequest, MessageCreate, MessageResponse,
                      PasswordVerification, EventResponse, EventUpdate, EventCreate)
@@ -121,13 +119,6 @@ def role_required(required_role: UserRole):
         return wrapper
     return decorator
 
-def get_icon_hex(icon):
-    if not icon:
-        return None
-    if isinstance(icon, (bytes, bytearray)):
-        return icon.hex()
-    return icon
-
 def check_event_permissions(db: Session, event_id: int, current_user: User):
     db_event = db.query(Event).filter(Event.id == event_id).first()
     if not db_event:
@@ -184,7 +175,6 @@ async def login(user_login: UserLogin, db: Session = Depends(get_db)):
         "user_id": user.id,
         "role": user.role.value,
         "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-        "icon": get_icon_hex(user.icon)
     }
 
 @app.get("/auth/verify")
@@ -224,9 +214,6 @@ async def register(user_register: UserRegister, db: Session = Depends(get_db)):
         # Хэширование пароля
         hashed_password = get_password_hash(user_register.password)
 
-        # Выбор иконки
-        icon = user_register.icon or random.choice(AVAILABLE_ICONS)
-
         # Создание пользователя
         db_user = User(
             name=user_register.name,
@@ -237,7 +224,6 @@ async def register(user_register: UserRegister, db: Session = Depends(get_db)):
             password=hashed_password,
             login=user_register.login,
             email=user_register.email,
-            icon=icon,
             role=UserRole.user
         )
         db.add(db_user)
@@ -252,7 +238,6 @@ async def register(user_register: UserRegister, db: Session = Depends(get_db)):
             group_name=db_user.group_name,
             birthday=db_user.birthday,
             email=db_user.email,
-            icon=get_icon_hex(db_user.icon),
             role=db_user.role.value
         )
     except HTTPException:
@@ -284,7 +269,6 @@ async def read_user_profile(
             group_name=user.group_name,
             birthday=user.birthday,
             email=user.email,
-            icon=get_icon_hex(user.icon),
             role=user.role.value
         )
     except Exception as e:
@@ -331,7 +315,6 @@ async def update_user_profile(
             group_name=user.group_name,
             birthday=user.birthday,
             email=user.email,
-            icon=get_icon_hex(user.icon),
             role=user.role.value
         )
     except Exception as e:
@@ -378,7 +361,6 @@ async def get_all_users(
                 group_name=user.group_name,
                 birthday=user.birthday,
                 email=user.email,
-                icon=get_icon_hex(user.icon),
                 role=user.role.value
             )
             for user in users
@@ -416,7 +398,6 @@ async def read_user(
             group_name=user.group_name,
             birthday=user.birthday,
             email=user.email,
-            icon=get_icon_hex(user.icon),
             role=user.role.value
         )
     except Exception as e:
@@ -449,55 +430,6 @@ async def update_user_role(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error updating user role"
-        )
-
-@app.put("/users/profile/icon")
-async def update_profile_icon(
-    file: UploadFile = File(...),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    try:
-        if not file.content_type.startswith('image/'):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="File must be an image"
-            )
-        contents = await file.read()
-        current_user.icon = contents
-        db.commit()
-        db.refresh(current_user)
-        return {"message": "Profile icon updated successfully"}
-    except Exception as e:
-        logger.error(f"Error updating profile icon: {str(e)}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error updating profile icon"
-        )
-
-@app.get("/users/{user_id}/icon")
-async def get_user_icon(
-    user_id: int,
-    db: Session = Depends(get_db)
-):
-    try:
-        user = db.query(User).filter(User.id == user_id).first()
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
-            )
-        if not user.icon:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User has no icon"
-            )
-        return Response(content=user.icon, media_type="image/png")
-    except Exception as e:
-        logger.error(f"Error getting user icon: {str(e)}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error getting user icon"
         )
 
 @app.post("/restore-password")
@@ -565,7 +497,6 @@ async def read_tasks(
                 created_by=task.created_by,
                 creator_surname=task.creator.surname if task.creator else "Unknown",
                 creator_name=task.creator.name if task.creator else "Unknown",
-                creator_icon=get_icon_hex(task.creator.icon) if task.creator else None
             )
             for task in tasks
         ]
@@ -605,7 +536,6 @@ async def create_task(
             created_by=db_task.created_by,
             creator_surname=creator.surname if creator else "Unknown",
             creator_name=creator.name if creator else "Unknown",
-            creator_icon=get_icon_hex(creator.icon) if creator else None
         )
     except Exception as e:
         logger.error(f"Error creating task: {str(e)}", exc_info=True)
@@ -659,7 +589,6 @@ async def update_task(
             created_by=db_task.created_by,
             creator_surname=creator.surname if creator else "Unknown",
             creator_name=creator.name if creator else "Unknown",
-            creator_icon=get_icon_hex(creator.icon) if creator else None
         )
     except Exception as e:
         logger.error(f"Error updating task: {str(e)}", exc_info=True)
@@ -694,7 +623,6 @@ async def delete_task(
             created_by=db_task.created_by,
             creator_surname=creator.surname if creator else "Unknown",
             creator_name=creator.name if creator else "Unknown",
-            creator_icon=get_icon_hex(creator.icon) if creator else None
         )
 
         db.delete(db_task)
@@ -786,7 +714,6 @@ async def read_user_tasks(
                 created_by=task.created_by,
                 creator_surname=task.creator.surname if task.creator else "Unknown",
                 creator_name=task.creator.name if task.creator else "Unknown",
-                creator_icon=get_icon_hex(task.creator.icon) if task.creator else None
             )
             for task in tasks
         ]
@@ -940,7 +867,6 @@ async def create_event(
             user_id=db_event.user_id,
             creator_name=creator.name,
             creator_surname=creator.surname,
-            creator_icon=get_icon_hex(creator.icon)
         )
     except HTTPException:
         raise
@@ -995,7 +921,6 @@ async def read_events(
                 user_id=event.user_id,
                 creator_name=event.user.name,
                 creator_surname=event.user.surname,
-                creator_icon=get_icon_hex(event.user.icon)
             ) for event in events
         ]
     except HTTPException:
@@ -1030,7 +955,6 @@ async def read_event(
             user_id=event.user_id,
             creator_name=event.user.name,
             creator_surname=event.user.surname,
-            creator_icon=get_icon_hex(event.user.icon)
         )
     except HTTPException:
         raise
@@ -1087,7 +1011,6 @@ async def update_event(
             user_id=db_event.user_id,
             creator_name=creator.name,
             creator_surname=creator.surname,
-            creator_icon=get_icon_hex(creator.icon)
         )
     except HTTPException:
         raise
