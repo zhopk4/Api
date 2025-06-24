@@ -6,7 +6,7 @@ from datetime import datetime
 import enum
 
 # Конфигурация базы данных
-DATABASE_URL = "postgresql://postgres:951357@localhost:5432/test1"
+DATABASE_URL = "postgresql://my_db_w9dy_user:bXQYcSzAoiVwaTk0IQrLLqKJMlg9Yt7m@dpg-d1cvo8buibrs73dm4rlg-a.frankfurt-postgres.render.com/my_db_w9dy"
 
 # Создаем движок с настройками
 engine = create_engine(
