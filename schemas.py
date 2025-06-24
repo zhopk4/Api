@@ -118,8 +118,8 @@ class TaskStats(BaseModel):
     completed_tasks: int
 
 class MessageCreate(BaseModel):
-    message_text: str = Field(..., min_length=1, max_length=500)
     receiver_id: int
+    message_text: str = Field(..., min_length=1, max_length=500)
 
 class MessageResponse(BaseModel):
     id: int
